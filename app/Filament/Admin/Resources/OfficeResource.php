@@ -106,10 +106,12 @@ class OfficeResource extends Resource
         ]);
 }
 
-    public static function getRelations(): array
-    {
-        return [];
-    }
+   public static function getRelations(): array
+{
+    return [
+        \App\Filament\Admin\Resources\OfficeResource\RelationManagers\UsersRelationManager::class,
+    ];
+}
 
     public static function getPages(): array
     {

@@ -3,13 +3,13 @@ import { ApiResponse, AuthError } from '@/types';
 
 // إنشاء instance من axios
 const api = axios.create({
-    baseURL: '/api/v1',
+    baseURL: '/api/v1', // ✅ تأكد أن هذا صحيح
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
     },
-    withCredentials: true, // مهم للـ cookies و CSRF
+    withCredentials: true,
 });
 
 // Interceptor للطلب: إضافة التوكن
@@ -28,32 +28,22 @@ api.interceptors.request.use(
 
 // Interceptor للرد: معالجة الأخطاء بشكل موحد
 api.interceptors.response.use(
-    (response) => {
-        // ردود ناجحة
-        return response;
-    },
+    (response) => response,
     (error: AxiosError<AuthError>) => {
         if (error.response?.status === 401) {
-            // توكن غير صالح أو منتهي الصلاحية
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user');
+            localStorage.removeItem('office');
             
-            // إعادة توجيه لصفحة login إذا لم نكن فيها
             if (!window.location.pathname.includes('/login')) {
                 window.location.href = '/login';
             }
         }
-        
-        if (error.response?.status === 419) {
-            // CSRF token mismatch
-            window.location.href = '/login';
-        }
-        
         return Promise.reject(error);
     }
 );
 
-// دالة للحصول على CSRF token قبل أي طلب POST/PUT/DELETE
+// دالة للحصول على CSRF token
 export const ensureCsrfToken = async (): Promise<void> => {
     await axios.get('/sanctum/csrf-cookie');
 };

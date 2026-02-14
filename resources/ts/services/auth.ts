@@ -1,54 +1,83 @@
 import api, { ensureCsrfToken } from './api';
 import { LoginCredentials, LoginResponse, User, Office, Subscription } from '@/types';
+import { AxiosError } from 'axios';
+
+// تعريف واجهة ApiResponse محلياً إذا لم تكن مستوردة
+interface ApiResponse<T = any> {
+    success: boolean;
+    message: string;
+    data: T;
+}
 
 class AuthService {
     private readonly TOKEN_KEY = 'auth_token';
     private readonly USER_KEY = 'user';
     private readonly OFFICE_KEY = 'office';
+    private readonly SUBSCRIPTION_KEY = 'subscription';
 
     // تسجيل الدخول
     async login(credentials: LoginCredentials): Promise<LoginResponse> {
-        // التأكد من وجود CSRF token (للأمان)
-        await ensureCsrfToken();
-        
-        const response = await api.post<LoginResponse>('/auth/login', credentials);
-        
-        if (response.data.success && response.data.data.token) {
-            // حفظ البيانات في localStorage
-            this.setToken(response.data.data.token);
-            this.setUser(response.data.data.user);
-            this.setOffice(response.data.data.office);
+        try {
+            // التأكد من وجود CSRF token (للأمان)
+            await ensureCsrfToken();
             
-            // يمكن حفظ الاشتراك إذا وجد
-            if (response.data.data.subscription) {
-                this.setSubscription(response.data.data.subscription);
+            // ✅ ملاحظة: المسار يجب أن يبدأ بدون "/" لأن baseURL موجود
+            const response = await api.post<LoginResponse>('auth/login', credentials);
+            
+            if (response.data?.success && response.data?.data?.token) {
+                // حفظ البيانات في localStorage
+                this.setToken(response.data.data.token);
+                this.setUser(response.data.data.user);
+                this.setOffice(response.data.data.office);
+                
+                if (response.data.data.subscription) {
+                    this.setSubscription(response.data.data.subscription);
+                }
+                
+                return response.data;
             }
+            
+            throw new Error(response.data?.message || 'فشل تسجيل الدخول');
+            
+        } catch (error) {
+            // تحسين معالجة الأخطاء
+            if (error instanceof AxiosError) {
+                const message = error.response?.data?.message || 
+                               error.response?.data?.errors?.email?.[0] || 
+                               'فشل الاتصال بالخادم';
+                throw new Error(message);
+            }
+            throw error;
         }
-        
-        return response.data;
     }
 
     // تسجيل الخروج
     async logout(): Promise<void> {
         try {
-            await api.post('/auth/logout');
+            await api.post('auth/logout');
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
-            // مسح البيانات محلياً حتى لو فشل الطلب
             this.clearStorage();
+            // إعادة توجيه إلى صفحة login
+            if (typeof window !== 'undefined') {
+                window.location.href = '/login';
+            }
         }
     }
 
     // التحقق من المصادقة
     async checkAuth(): Promise<User | null> {
         try {
-            const response = await api.get<ApiResponse<{ user: User }>>('/auth/me');
-            if (response.data.success) {
+            const response = await api.get<ApiResponse<{ user: User }>>('auth/me');
+            
+            if (response.data?.success && response.data?.data?.user) {
                 this.setUser(response.data.data.user);
                 return response.data.data.user;
             }
+            
             return null;
+            
         } catch (error) {
             this.clearStorage();
             return null;
@@ -57,25 +86,34 @@ class AuthService {
 
     // إدارة التوكن
     setToken(token: string): void {
-        localStorage.setItem(this.TOKEN_KEY, token);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(this.TOKEN_KEY, token);
+        }
     }
 
     getToken(): string | null {
-        return localStorage.getItem(this.TOKEN_KEY);
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem(this.TOKEN_KEY);
+        }
+        return null;
     }
 
     // إدارة المستخدم
     setUser(user: User): void {
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        }
     }
 
     getUser(): User | null {
-        const userStr = localStorage.getItem(this.USER_KEY);
-        if (userStr) {
-            try {
-                return JSON.parse(userStr) as User;
-            } catch {
-                return null;
+        if (typeof window !== 'undefined') {
+            const userStr = localStorage.getItem(this.USER_KEY);
+            if (userStr) {
+                try {
+                    return JSON.parse(userStr) as User;
+                } catch {
+                    return null;
+                }
             }
         }
         return null;
@@ -83,50 +121,62 @@ class AuthService {
 
     // إدارة المكتب
     setOffice(office: Office): void {
-        localStorage.setItem(this.OFFICE_KEY, JSON.stringify(office));
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(this.OFFICE_KEY, JSON.stringify(office));
+        }
     }
 
     getOffice(): Office | null {
-        const officeStr = localStorage.getItem(this.OFFICE_KEY);
-        if (officeStr) {
-            try {
-                return JSON.parse(officeStr) as Office;
-            } catch {
-                return null;
+        if (typeof window !== 'undefined') {
+            const officeStr = localStorage.getItem(this.OFFICE_KEY);
+            if (officeStr) {
+                try {
+                    return JSON.parse(officeStr) as Office;
+                } catch {
+                    return null;
+                }
             }
         }
         return null;
     }
 
-    // إدارة الاشتراك (اختياري)
+    // إدارة الاشتراك
     setSubscription(subscription: Subscription): void {
-        localStorage.setItem('subscription', JSON.stringify(subscription));
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(this.SUBSCRIPTION_KEY, JSON.stringify(subscription));
+        }
     }
 
     // مسح التخزين
     clearStorage(): void {
-        localStorage.removeItem(this.TOKEN_KEY);
-        localStorage.removeItem(this.USER_KEY);
-        localStorage.removeItem(this.OFFICE_KEY);
-        localStorage.removeItem('subscription');
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(this.TOKEN_KEY);
+            localStorage.removeItem(this.USER_KEY);
+            localStorage.removeItem(this.OFFICE_KEY);
+            localStorage.removeItem(this.SUBSCRIPTION_KEY);
+        }
     }
 
-    // هل المستخدم موثق؟ (للتحقق من الصلاحيات)
+    // التحقق من الأدوار
     isNotary(): boolean {
         const user = this.getUser();
         return user?.role === 'notary';
     }
 
-    // هل المستخدم مساعد؟
     isAssistant(): boolean {
         const user = this.getUser();
         return user?.role === 'assistant';
     }
 
-    // هل المكتب نشط؟
+    // التحقق من حالة المكتب
     isOfficeActive(): boolean {
         const office = this.getOffice();
         return office?.subscription_status === 'active';
+    }
+
+    // هل المستخدم مسجل دخول؟
+    isAuthenticated(): boolean {
+        return !!this.getToken() && !!this.getUser();
     }
 }
 

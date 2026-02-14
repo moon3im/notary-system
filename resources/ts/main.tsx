@@ -3,16 +3,20 @@ import ReactDOM from 'react-dom/client';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import './index.css';
+import '@/../css/index.css';
 
 // Layouts
 import AppLayout from '@/layouts/AppLayout';
+import MainLayout from '@/layouts/MainLayout'; // ✅ الـ Layout الجديد
+import { Clients } from './pages/clients/Clients';
+
+import { Templates } from './pages/templates/Templates';
 
 // Pages
 import Login from '@/pages/auth/Login';
-
-// مؤقتاً صفحات فارغة (سنملأها لاحقاً)
-const Dashboard = () => <div>Dashboard</div>;
+import Dashboard from './pages/dashboard/Dashboard';
+import { TemplateCreate } from './pages/templates/TemplateCreate';
+import { TemplateEdit } from './pages/templates/TemplateEdit';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -36,13 +40,47 @@ const router = createBrowserRouter([
     },
     {
         path: '/',
-        element: <AppLayout requireAuth />,
+        element: <MainLayout />, // ✅ استخدم MainLayout بدلاً من AppLayout
         children: [
             {
                 path: 'dashboard',
                 element: <Dashboard />,
             },
-            // باقي الصفحات سنضيفها لاحقاً
+            {
+                path: 'clients',
+                element: <Clients />,
+            },
+            
+           {
+    path: 'templates',
+    children: [
+        {
+            index: true,
+            element: <Templates />,
+        },
+        {
+            path: 'create',
+            element: <TemplateCreate />,
+        },
+        {
+            path: ':id/edit',
+            element: <TemplateEdit />,
+        },
+       
+    ],
+},
+            {
+                path: 'contracts',
+                element: <div>صفحة العقود</div>,
+            },
+            {
+                path: 'office',
+                element: <div>صفحة المكتب</div>,
+            },
+            {
+                path: 'settings',
+                element: <div>صفحة الإعدادات</div>,
+            },
         ],
     },
 ]);

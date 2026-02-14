@@ -23,12 +23,10 @@ export const useAuth = (): UseAuthReturn => {
     const [loading, setLoading] = useState<boolean>(true);
     const navigate = useNavigate();
 
-    // التحقق من المصادقة عند تحميل الصفحة
     useEffect(() => {
         const verifyAuth = async () => {
             setLoading(true);
             
-            // إذا كان هناك توكن، تحقق من صحته
             if (authService.getToken()) {
                 const userData = await authService.checkAuth();
                 if (userData) {
@@ -43,7 +41,6 @@ export const useAuth = (): UseAuthReturn => {
         verifyAuth();
     }, []);
 
-    // تسجيل الدخول
     const login = useCallback(async (credentials: LoginCredentials) => {
         setLoading(true);
         
@@ -57,7 +54,7 @@ export const useAuth = (): UseAuthReturn => {
             navigate('/dashboard', { replace: true });
             
         } catch (error: any) {
-            const message = error.response?.data?.message || 'فشل تسجيل الدخول';
+            const message = error.message || 'فشل تسجيل الدخول';
             toast.error(message);
             throw error;
         } finally {
@@ -65,7 +62,6 @@ export const useAuth = (): UseAuthReturn => {
         }
     }, [navigate]);
 
-    // تسجيل الخروج
     const logout = useCallback(async () => {
         setLoading(true);
         
@@ -82,7 +78,6 @@ export const useAuth = (): UseAuthReturn => {
         }
     }, [navigate]);
 
-    // التحقق من المصادقة يدوياً
     const checkAuth = useCallback(async (): Promise<boolean> => {
         const userData = await authService.checkAuth();
         return !!userData;
@@ -92,7 +87,7 @@ export const useAuth = (): UseAuthReturn => {
         user,
         office,
         loading,
-        isAuthenticated: !!user,
+        isAuthenticated: authService.isAuthenticated(),
         isNotary: authService.isNotary(),
         isAssistant: authService.isAssistant(),
         isOfficeActive: authService.isOfficeActive(),
