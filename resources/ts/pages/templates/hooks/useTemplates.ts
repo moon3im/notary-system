@@ -15,15 +15,28 @@ export const useTemplates = (filters?: TemplateFilters) => {
     });
 
     const createMutation = useMutation({
-        mutationFn: (data: CreateTemplateDto) => templatesService.createTemplate(data),
-        onSuccess: () => {
-            toast.success('تم إنشاء القالب بنجاح');
-            queryClient.invalidateQueries({ queryKey: [TEMPLATES_QUERY_KEY] });
-        },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'فشل في إنشاء القالب');
-        },
-    });
+    mutationFn: async (data: CreateTemplateDto) => {
+        console.log('📡 [useTemplates] createMutation called with:', data);
+        try {
+            const result = await templatesService.createTemplate(data);
+            console.log('📡 [useTemplates] createMutation success:', result);
+            return result;
+        } catch (error) {
+            console.error('📡 [useTemplates] createMutation error:', error);
+            throw error;
+        }
+    },
+    onSuccess: (data) => {
+        console.log('✅ [useTemplates] onSuccess:', data);
+        toast.success('تم إنشاء القالب بنجاح');
+        queryClient.invalidateQueries({ queryKey: [TEMPLATES_QUERY_KEY] });
+    },
+    onError: (error: any) => {
+        console.error('❌ [useTemplates] onError:', error);
+        console.error('❌ [useTemplates] Error response:', error.response?.data);
+        toast.error(error.response?.data?.message || 'فشل في إنشاء القالب');
+    },
+});
 
     const updateMutation = useMutation({
         mutationFn: ({ id, data }: { id: string; data: UpdateTemplateDto }) => 

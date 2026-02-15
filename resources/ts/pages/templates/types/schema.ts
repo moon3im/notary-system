@@ -62,7 +62,7 @@ export const templateSchema = z.object({
     status: z.enum(['draft', 'active'])
         .default('draft'),
     
-    body: z.string()
+    content: z.string()
         .min(10, 'نص العقد يجب أن يكون 10 أحرف على الأقل'),
     
     fields: z.array(templateFieldSchema)

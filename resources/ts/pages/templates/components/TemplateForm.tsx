@@ -73,46 +73,54 @@ export const TemplateForm: React.FC<TemplateFormProps> = ({
             contract_type: '',
             description: '',
             status: 'draft',
-            body: '',
+            content: '',
             fields: [],
         });
     }
 }, [initialData, form]);    
 
   const onSubmit = async (data: TemplateFormData) => {
-    console.log('1️⃣ Form submitted with data:', data); // ✅ هل يظهر هذا؟
+    console.log('========== FORM SUBMISSION START ==========');
+    console.log('1️⃣ Raw form data:', data);
     
     try {
-        // التأكد من إرسال content بدلاً من body
+        // التأكد من إرسال content
         const payload = {
             ...data,
             content: data.content, // تأكد من استخدام content
             fields: data.fields || []
         };
         
-        console.log('2️⃣ Payload to send:', payload); // ✅ هل يظهر هذا؟
+        console.log('2️⃣ Payload to send:', JSON.stringify(payload, null, 2));
         
         if (isEditing && initialData) {
-            console.log('3️⃣ Updating template...');
-            await updateTemplate(initialData.id, payload);
+            console.log('3️⃣ Mode: UPDATE');
+            console.log('3️⃣ Template ID:', initialData.id);
+            const result = await updateTemplate(initialData.id, payload);
+            console.log('4️⃣ Update result:', result);
             toast.success('تم تحديث القالب بنجاح');
         } else {
-            console.log('3️⃣ Creating template...');
-            await createTemplate(payload);
+            console.log('3️⃣ Mode: CREATE');
+            const result = await createTemplate(payload);
+            console.log('4️⃣ Create result:', result);
             toast.success('تم إنشاء القالب بنجاح');
         }
         
-        console.log('4️⃣ Operation successful!');
+        console.log('5️⃣ Operation successful, navigating...');
         navigate('/templates');
+        
     } catch (error) {
-        console.error('5️⃣ Error in onSubmit:', error); // ✅ هل يظهر هذا؟
+        console.error('❌ Error in onSubmit:', error);
+        console.error('❌ Error response:', error.response?.data);
+    } finally {
+        console.log('========== FORM SUBMISSION END ==========');
     }
 };
 
     const loading = isCreating || isUpdating;
 
     // معاينة النص مع placeholders
-    const previewText = form.watch('body');
+    const previewText = form.watch('content');
     const fields = form.watch('fields');
 
     const getPreviewWithPlaceholders = () => {
